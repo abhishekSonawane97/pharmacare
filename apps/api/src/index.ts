@@ -2,6 +2,14 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import dns from 'dns';
+
+// Configure public DNS servers to bypass unstable local router DNS for Mongo SRV queries
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (err: any) {
+  console.warn('[dns] Could not set custom DNS servers:', err.message || err);
+}
 
 import authRouter from './routes/auth';
 import customersRouter from './routes/customers';
@@ -59,15 +67,23 @@ async function main() {
 
   await connectAllTenants();
 
-  // Ensure each tenant has its Settings singleton.
+  // Ensure each tenant has its Settings singleton if connected.
   for (const t of TENANT_IDS) {
     const conn = getTenantConnection(t);
-    const { Settings } = getModels(conn);
-    await ensureSettings(Settings);
+    if (conn.readyState === 1) {
+      const { Settings } = getModels(conn);
+      try {
+        await ensureSettings(Settings);
+      } catch (err: any) {
+        console.warn(`[settings] Could not ensure settings for tenant ${t}:`, err.message || err);
+      }
+    } else {
+      console.warn(`[settings] Tenant ${t} is not fully connected. Settings initialization will run lazily.`);
+    }
   }
 
   app.listen(PORT, () => {
-    console.log(`[api] listening on :${PORT}`);
+    console.log(`[api] listening on :${PORT}`); // reloaded to retry connections
   });
 }
 

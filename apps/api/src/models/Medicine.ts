@@ -6,7 +6,7 @@ export interface IMedicine extends Document {
   content?: string;
   category?: string;
   location?: string;
-  type?: 'tab' | 'cap' | 'syrup';
+  type?: 'tab' | 'cap' | 'tab_cap' | 'syrup' | 'drops' | 'cream_lotion' | 'ayurvedic' | 'dypers' | 'other';
   inStock: boolean;
   purchasePrice?: number;
   mrp?: number;
@@ -22,7 +22,7 @@ export const MedicineSchema = new Schema<IMedicine>(
     content: { type: String, trim: true },
     category: { type: String, trim: true },
     location: { type: String, trim: true },
-    type: { type: String, enum: ['tab', 'cap', 'syrup'] },
+    type: { type: String, enum: ['tab', 'cap', 'tab_cap', 'syrup', 'drops', 'cream_lotion', 'ayurvedic', 'dypers', 'other'] },
     inStock: { type: Boolean, default: true },
     purchasePrice: { type: Number },
     mrp: { type: Number },

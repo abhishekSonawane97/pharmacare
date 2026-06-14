@@ -56,7 +56,7 @@ export interface Medicine {
   content?: string;
   category?: string;
   location?: string;
-  type?: 'tab' | 'cap' | 'syrup';
+  type?: 'tab' | 'cap' | 'tab_cap' | 'syrup' | 'drops' | 'cream_lotion' | 'ayurvedic' | 'dypers' | 'other';
   inStock: boolean;
   purchasePrice?: number;
   mrp?: number;

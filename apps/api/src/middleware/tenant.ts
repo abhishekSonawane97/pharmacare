@@ -15,7 +15,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Connection } from 'mongoose';
 import { isTenantId, TenantId } from '../config/tenants';
 import { getTenantConnection } from '../db/connections';
-import { validationError } from '../utils/errors';
+import { validationError, HttpError } from '../utils/errors';
 
 // Extend Express Request to carry tenant info downstream
 declare module 'express-serve-static-core' {
@@ -40,7 +40,11 @@ export function tenantFromBody(req: Request, _res: Response, next: NextFunction)
   }
   try {
     req.tenant = t;
-    req.tenantConnection = getTenantConnection(t);
+    const conn = getTenantConnection(t);
+    if (conn.readyState === 0 || conn.readyState === 3) {
+      return next(new HttpError(503, 'internal', `The database for pharmacy "${t}" is currently offline. Please try again.`));
+    }
+    req.tenantConnection = conn;
     next();
   } catch (err: any) {
     return next(validationError(`Tenant "${t}" is not available on this deployment: ${err?.message || err}`));
@@ -58,9 +62,17 @@ export function attachTenantFromJwt(req: Request, tenantId: string): boolean {
   }
   try {
     req.tenant = tenantId;
-    req.tenantConnection = getTenantConnection(tenantId);
+    const conn = getTenantConnection(tenantId);
+    if (conn.readyState === 0 || conn.readyState === 3) {
+      console.error(`[tenant] connection for tenant ${tenantId} is offline (readyState ${conn.readyState})`);
+      throw new HttpError(503, 'internal', `The database connection for pharmacy "${tenantId}" is currently offline. Please try again.`);
+    }
+    req.tenantConnection = conn;
     return true;
   } catch (err: any) {
+    if (err instanceof HttpError) {
+      throw err;
+    }
     console.error(`[tenant] cannot resolve JWT tenant ${tenantId}:`, err?.message || err);
     return false;
   }
