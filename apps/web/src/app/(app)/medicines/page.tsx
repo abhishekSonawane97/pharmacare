@@ -12,7 +12,25 @@ import { Button, IconButton } from '@/components/Button';
 import { Modal, ConfirmDialog } from '@/components/Modal';
 import type { Medicine } from '@/lib/types';
 
-const TYPE_LABEL: Record<string, string> = { tab: 'Tablet', cap: 'Capsule', syrup: 'Syrup' };
+const TYPE_LABEL: Record<string, string> = {
+  tab: 'Tablet/Capsule',
+  cap: 'Tablet/Capsule',
+  tab_cap: 'Tablet/Capsule',
+  syrup: 'Syrup',
+  drops: 'Drops',
+  cream_lotion: 'Cream/Lotion',
+  ayurvedic: 'Ayurvedic',
+  dypers: 'dypers',
+  other: 'Other',
+};
+
+function getBadgeTone(type?: string): 'neutral' | 'brand' | 'success' | 'warning' | 'danger' {
+  if (!type) return 'neutral';
+  if (type === 'tab' || type === 'cap' || type === 'tab_cap') return 'brand';
+  if (type === 'syrup') return 'warning';
+  if (type === 'ayurvedic') return 'success';
+  return 'neutral';
+}
 
 function fmtPrice(value: number | undefined | null): string {
   if (value === undefined || value === null || Number.isNaN(value)) return '—';
@@ -46,7 +64,12 @@ export default function MedicinesPage() {
 
   const filtered = useMemo(() => {
     if (typeFilter === 'all') return medicines;
-    return medicines.filter(m => m.type === typeFilter);
+    return medicines.filter(m => {
+      if (typeFilter === 'tab_cap') {
+        return m.type === 'tab' || m.type === 'cap' || m.type === 'tab_cap';
+      }
+      return m.type === typeFilter;
+    });
   }, [medicines, typeFilter]);
 
   const canEdit = user?.role === 'admin';
@@ -88,11 +111,15 @@ export default function MedicinesPage() {
 
       <div className="bg-white border border-[var(--border)] rounded-lg overflow-hidden">
         <div className="flex flex-col gap-2 px-4 py-3 border-b border-[var(--border)] md:flex-row md:items-center">
-          <Select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="w-full md:w-[140px]">
+          <Select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="w-full md:w-[170px]">
             <option value="all">All types</option>
-            <option value="tab">Tablet</option>
-            <option value="cap">Capsule</option>
+            <option value="tab_cap">Tablet/Capsule</option>
             <option value="syrup">Syrup</option>
+            <option value="drops">Drops</option>
+            <option value="cream_lotion">Cream/Lotion</option>
+            <option value="ayurvedic">Ayurvedic</option>
+            <option value="dypers">dypers</option>
+            <option value="other">Other</option>
           </Select>
           <div className="flex-1 md:max-w-md">
             <Input icon={Search} placeholder="Search by name or content…" value={q} onChange={e => setQ(e.target.value)} />
@@ -126,7 +153,7 @@ export default function MedicinesPage() {
                   {m.location || <span className="text-[var(--muted)] italic">—</span>}
                 </td>
                 <td className="py-3 px-4">
-                  <Badge tone={m.type === 'syrup' ? 'warning' : m.type === 'cap' ? 'brand' : 'neutral'}>
+                  <Badge tone={getBadgeTone(m.type)}>
                     {(m.type && TYPE_LABEL[m.type]) || '—'}
                   </Badge>
                 </td>
@@ -170,7 +197,7 @@ export default function MedicinesPage() {
                 )}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <Badge tone={m.type === 'syrup' ? 'warning' : m.type === 'cap' ? 'brand' : 'neutral'}>
+                <Badge tone={getBadgeTone(m.type)}>
                   {(m.type && TYPE_LABEL[m.type]) || '—'}
                 </Badge>
                 <Badge tone={m.inStock ? 'success' : 'danger'} dot>
@@ -229,7 +256,7 @@ function MedicineFormModal({
   const [form, setForm] = useState<Partial<Medicine>>({
     name: '',
     content: '',
-    type: 'tab',
+    type: 'tab_cap',
     inStock: true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -237,7 +264,7 @@ function MedicineFormModal({
   useEffect(() => {
     if (!open) return;
     setErrors({});
-    setForm(existing ?? { name: '', content: '', type: 'tab', inStock: true });
+    setForm(existing ?? { name: '', content: '', type: 'tab_cap', inStock: true });
   }, [open, existing]);
 
   function submit() {
@@ -288,26 +315,19 @@ function MedicineFormModal({
         </div>
         <div className="col-span-2">
           <Field label="Type" required>
-            <div className="flex gap-2">
-              {[
-                { v: 'tab', l: 'Tablet' },
-                { v: 'cap', l: 'Capsule' },
-                { v: 'syrup', l: 'Syrup' },
-              ].map(o => (
-                <button
-                  key={o.v}
-                  type="button"
-                  onClick={() => setForm({ ...form, type: o.v as any })}
-                  className={`flex-1 h-9 rounded-md border text-[13px] transition-colors ${
-                    form.type === o.v
-                      ? 'border-[var(--brand-500)] bg-[var(--brand-50)] text-[var(--brand-800)]'
-                      : 'border-[var(--border)] text-[var(--ink-2)] hover:bg-[var(--bg-soft)]'
-                  }`}
-                >
-                  {o.l}
-                </button>
-              ))}
-            </div>
+            <Select
+              className="w-full"
+              value={form.type === 'tab' || form.type === 'cap' ? 'tab_cap' : (form.type || 'tab_cap')}
+              onChange={e => setForm({ ...form, type: e.target.value as any })}
+            >
+              <option value="tab_cap">Tablet/Capsule</option>
+              <option value="syrup">Syrup</option>
+              <option value="drops">Drops</option>
+              <option value="cream_lotion">Cream/Lotion</option>
+              <option value="ayurvedic">Ayurvedic</option>
+              <option value="dypers">dypers</option>
+              <option value="other">Other</option>
+            </Select>
           </Field>
         </div>
         <div className="col-span-2 grid grid-cols-3 gap-3">

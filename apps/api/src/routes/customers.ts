@@ -39,7 +39,7 @@ router.get(
     const conditions: any = { isActive: true };
     if (q) {
       const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      conditions.$or = [{ name: re }, { phone: re }];
+      conditions.$or = [{ name: re }, { phone: re }, { altPhone: re }];
     }
 
     const now = new Date();

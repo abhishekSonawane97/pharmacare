@@ -138,10 +138,10 @@ export function CustomerForm({ open, onClose, existing, medicines, onSave }: Cus
           <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} error={errors.name} />
         </Field>
         <Field label="Phone" required error={errors.phone}>
-          <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="10 digits" error={errors.phone} />
+          <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })} placeholder="10 digits" error={errors.phone} />
         </Field>
         <Field label="Alternate phone">
-          <Input value={form.altPhone} onChange={e => setForm({ ...form, altPhone: e.target.value })} />
+          <Input value={form.altPhone} onChange={e => setForm({ ...form, altPhone: e.target.value.replace(/\D/g, '') })} />
         </Field>
         <Field label="Next due date" required error={errors.nextDueDate}>
           <Input type="date" value={form.nextDueDate} onChange={e => setForm({ ...form, nextDueDate: e.target.value })} />

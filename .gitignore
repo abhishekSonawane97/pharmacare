@@ -41,3 +41,7 @@ scripts/seed-ssm.sh
 .aws-config
 *.pem
 
+# Antigravity temporary workspace artifact folder
+d8899fc0-978d-4647-8048-9c214779a913/
+
+

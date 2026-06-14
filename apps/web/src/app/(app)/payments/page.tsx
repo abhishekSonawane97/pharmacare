@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Plus, ArrowDown, ArrowUp, Wallet, Trash2 } from 'lucide-react';
+import { Search, Plus, ArrowDown, ArrowUp, Wallet, Trash2, X } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/Toast';
@@ -277,9 +277,26 @@ function PaymentFormModal({
     due: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [custSearch, setCustSearch] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const selectedCustomer = useMemo(() => customers.find(c => c._id === form.customerId) || null, [form.customerId, customers]);
+
+  const matchedCustomers = useMemo(() => {
+    const term = custSearch.trim().toLowerCase();
+    if (!term) return customers.slice(0, 8);
+    return customers.filter(c => {
+      return (
+        c.name?.toLowerCase().includes(term) ||
+        c.phone?.includes(term) ||
+        (c as any).altPhone?.includes(term)
+      );
+    }).slice(0, 8);
+  }, [custSearch, customers]);
 
   useEffect(() => {
-    if (open)
+    if (open) {
       setForm({
         customerId: '',
         walkIn: false,
@@ -291,7 +308,10 @@ function PaymentFormModal({
         notes: '',
         due: false,
       });
-    if (open) setErrors({});
+      setErrors({});
+      setCustSearch('');
+      setDropdownOpen(false);
+    }
   }, [open]);
 
   function submit() {
@@ -355,18 +375,57 @@ function PaymentFormModal({
         ) : (
           <div className="col-span-2">
             <Field label="Customer" required error={errors.customerId}>
-              <select
-                className="appearance-none w-full h-9 px-3 rounded-md border border-[var(--border)] bg-white text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand-500)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--brand-500)_22%,transparent)]"
-                value={form.customerId}
-                onChange={e => setForm({ ...form, customerId: e.target.value })}
-              >
-                <option value="">Select a customer…</option>
-                {customers.map(c => (
-                  <option key={c._id} value={c._id}>
-                    {c.name} · {c.phone}
-                  </option>
-                ))}
-              </select>
+              {selectedCustomer ? (
+                <div className="flex items-center gap-3 h-9 px-3 rounded-md border border-[var(--brand-500)] bg-[color-mix(in_oklab,var(--brand-500)_6%,transparent)]">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[13px] font-medium text-[var(--ink)] truncate">{selectedCustomer.name}</span>
+                    <span className="text-[12px] text-[var(--muted)] ml-2">{selectedCustomer.phone}{(selectedCustomer as any).altPhone ? ` · ${(selectedCustomer as any).altPhone}` : ''}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setForm({ ...form, customerId: '' }); setCustSearch(''); setTimeout(() => searchRef.current?.focus(), 50); }}
+                    className="text-[var(--muted)] hover:text-[var(--danger)] transition-colors flex-shrink-0"
+                  >
+                    <X size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Search by name, phone or alt phone…"
+                    value={custSearch}
+                    onChange={e => { setCustSearch(e.target.value); setDropdownOpen(true); }}
+                    onFocus={() => setDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+                    className={`w-full h-9 pl-8 pr-3 rounded-md border text-[13px] text-[var(--ink)] placeholder:text-[var(--muted)] outline-none transition-colors ${
+                      errors.customerId
+                        ? 'border-[var(--danger)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--danger)_22%,transparent)]'
+                        : 'border-[var(--border)] focus:border-[var(--brand-500)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--brand-500)_22%,transparent)]'
+                    }`}
+                  />
+                  <Search size={14} strokeWidth={1.8} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none" />
+                  {dropdownOpen && matchedCustomers.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[var(--border)] rounded-md shadow-lg z-20 overflow-hidden max-h-[220px] overflow-y-auto">
+                      {matchedCustomers.map(c => (
+                        <button
+                          key={c._id}
+                          type="button"
+                          onMouseDown={e => { e.preventDefault(); setForm({ ...form, customerId: c._id }); setCustSearch(''); setDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2.5 hover:bg-[var(--bg-soft)] flex items-center justify-between gap-3 border-b border-[var(--border)] last:border-0"
+                        >
+                          <span className="text-[13px] font-medium text-[var(--ink)] truncate">{c.name}</span>
+                          <span className="text-[11.5px] text-[var(--muted)] whitespace-nowrap">
+                            {c.phone}{(c as any).altPhone ? ` · ${(c as any).altPhone}` : ''}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Field>
           </div>
         )}

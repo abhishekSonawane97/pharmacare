@@ -13,7 +13,7 @@ const medicineSchema = z.object({
   content: z.string().optional().or(z.literal('')),
   category: z.string().optional().or(z.literal('')),
   location: z.string().optional().or(z.literal('')),
-  type: z.enum(['tab', 'cap', 'syrup']).optional(),
+  type: z.enum(['tab', 'cap', 'tab_cap', 'syrup', 'drops', 'cream_lotion', 'ayurvedic', 'dypers', 'other']).optional(),
   inStock: z.boolean().optional(),
   purchasePrice: z.number().nonnegative().optional(),
   mrp: z.number().nonnegative().optional(),
